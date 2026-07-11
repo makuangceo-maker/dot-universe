@@ -7,4 +7,4 @@ export default function Home() {
 
     <button>立即點光</button>
   </main>
-);
+);}
