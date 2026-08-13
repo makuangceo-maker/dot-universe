@@ -35,8 +35,9 @@ const router = useRouter();
             className="mt-6 w-full rounded-xl bg-slate-800 p-4"
             rows={3}
             value={text}
-           onChange={(e) => setText(e.target.value)} 
-            placeholder="分享今天的光點（30字內）"
+           onChange={(e) => setText(e.target.value.slice(0, 30))}
+           maxLength={30}
+           placeholder="分享今天的光點（30字內）"
           />
 
           <button type="button"
