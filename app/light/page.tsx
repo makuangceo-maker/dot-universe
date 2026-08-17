@@ -31,6 +31,7 @@ const router = useRouter();
 </label>
 {photo && <p className="mt-2 text-sm text-green-400">✓ 已選照片：{photo.name}</p>}
 {photo && <img src={URL.createObjectURL(photo)} alt="照片預覽" className="mt-3 h-32 w-32 rounded-xl object-cover" />}
+{photo && <button type="button" onClick={() => setPhoto(null)}>移除照片</button>} 
           <textarea
             className="mt-6 w-full rounded-xl bg-slate-800 p-4"
             rows={3}

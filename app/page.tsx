@@ -5,11 +5,28 @@ export default async function Home() {
   .from("players")
   .select("*");
  const player = players?.[0];
- const { count: lightPointCount, error: lightPointError } = await supabase
- .from("light_points")
-.select("*", { count: "exact", head: true })
-.eq("employee_id", player?.employee_id ?? "");
- const today = new Date().toISOString().split("T")[0];
+const { data: validLightPoints, error: lightPointError } = await supabase
+  .from("light_points")
+  .select("light_text, light_photo, light_date")
+  .eq("employee_id", player?.employee_id ?? "");
+
+const validItems = (validLightPoints ?? []).filter((item) => {
+  const hasText =
+    (item.light_text ?? "").trim() !== "" &&
+    item.light_text !== "EMPTY";
+  const hasPhoto = !!item.light_photo;
+
+  return hasText || hasPhoto;
+});
+
+const lightPointCount = validItems.length;
+
+const validDateSet = new Set(
+  validItems
+    .map((item) => item.light_date)
+    .filter((date): date is string => !!date)
+);
+ const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date());
 const { count: universeLightCount } = await supabase
   .from("light_points")
   .select("*", { count: "exact", head: true });
@@ -21,14 +38,42 @@ const { count: todayLightCount } = await supabase
 console.log("players:", players, "error:", error);
  console.log("lightPointCount =", lightPointCount);
 console.log("todayLightCount =", todayLightCount);
-  const stats = [
-    { label: "累積光點", value: lightPointCount?.toString() || "0", icon: "✨" },
-    { label: "目前星球", value: "希望星", icon: "🌍" },
-    { label: "目前稱號", value: "馬光希望小星星", icon: "🏅" },
-    { label: "連續點光天數", value: "1 天", icon: "🔥" },
-    { label: "金豆豆", value: "1", icon: "🪙" },
-  ];
+const dateSet = validDateSet;
+const weeklyDateCounts = new Map<string, number>();
 
+for (const date of validDateSet) {
+  const d = new Date(`${date}T00:00:00Z`);
+  const day = d.getUTCDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  d.setUTCDate(d.getUTCDate() + diffToMonday);
+
+  const weekStart = d.toISOString().split("T")[0];
+
+  weeklyDateCounts.set(
+    weekStart,
+    (weeklyDateCounts.get(weekStart) ?? 0) + 1
+  );
+}
+
+const goldBeanCount = Array.from(weeklyDateCounts.values()).filter(
+  (days) => days >= 3
+).length;
+let streakDays = 0;
+let checkDate = today;
+
+while (dateSet.has(checkDate)) {
+  streakDays += 1;
+  const d = new Date(`${checkDate}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  checkDate = d.toISOString().split("T")[0];
+}
+const stats = [
+  { label: "累積光點", value: lightPointCount?.toString() || "0", icon: "✨" },
+  { label: "目前星球", value: "希望星", icon: "🌍" },
+  { label: "累積點光天數", value: `${dateSet.size} 天`, icon: "🔥" },
+  { label: "金豆豆", value: goldBeanCount.toString(), icon: "🌕" },
+];
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center px-6 py-12">
