@@ -72,10 +72,12 @@ if ((todayPoints?.length ?? 0) >= 5) {
   const diffMinutes =
     (now.getTime() - lastTime.getTime()) / 1000 / 60;
 
-if (diffMinutes <= 60) {
-    alert("距離上一次點光未滿一小時！");
-    return;
-  }
+if (diffMinutes < 60) {
+  alert("距離上一次點光未滿一小時，本次內容不會保留");
+  setText("");
+  setPhoto(null);
+  return;
+}
 } 
 let photoUrl: string | null = null;
 

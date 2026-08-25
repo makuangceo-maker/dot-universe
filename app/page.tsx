@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 export default async function Home() {
  const { data: players, error } = await supabase
   .from("players")
@@ -7,7 +9,7 @@ export default async function Home() {
  const player = players?.[0];
 const { data: validLightPoints, error: lightPointError } = await supabase
   .from("light_points")
-  .select("light_text, light_photo, light_date")
+.select("light_text, light_photo, light_date, created_at")
   .eq("employee_id", player?.employee_id ?? "");
 
 const validItems = (validLightPoints ?? []).filter((item) => {
@@ -18,7 +20,27 @@ const validItems = (validLightPoints ?? []).filter((item) => {
 
   return hasText || hasPhoto;
 });
+const latestValidItem = [...validItems]
+  .filter((item) => item.created_at)
+  .sort(
+    (a, b) =>
+      new Date(b.created_at!).getTime() -
+      new Date(a.created_at!).getTime()
+  )[0];
 
+const lastLightAt = latestValidItem?.created_at
+  ? new Date(latestValidItem.created_at)
+  : null;
+
+const minutesSinceLastLight = lastLightAt
+  ? (Date.now() - lastLightAt.getTime()) / 1000 / 60
+  : Infinity;
+
+const canLightNow = minutesSinceLastLight >= 60;
+
+const minutesUntilNextLight = canLightNow
+  ? 0
+  : Math.ceil(60 - minutesSinceLastLight);
 const lightPointCount = validItems.length;
 
 const validDateSet = new Set(
@@ -68,11 +90,24 @@ while (dateSet.has(checkDate)) {
   d.setUTCDate(d.getUTCDate() - 1);
   checkDate = d.toISOString().split("T")[0];
 }
+const planetStages = [
+  { min: 300, name: "點宇宙至尊" },
+  { min: 240, name: "銀河星雲" },
+  { min: 180, name: "深邃海王" },
+  { min: 120, name: "璀璨晶星" },
+  { min: 50, name: "烈焰巨星" },
+  { min: 10, name: "萌芽綠星" },
+  { min: 0, name: "初始隕石" },
+];
+
+const currentPlanet =
+  planetStages.find((stage) => lightPointCount >= stage.min)?.name ??
+  "初始隕石";
 const stats = [
   { label: "累積光點", value: lightPointCount?.toString() || "0", icon: "✨" },
-  { label: "目前星球", value: "希望星", icon: "🌍" },
-  { label: "累積點光天數", value: `${dateSet.size} 天`, icon: "🔥" },
-  { label: "金豆豆", value: goldBeanCount.toString(), icon: "🌕" },
+{ label: "目前星球", value: currentPlanet, icon: "🌍" },
+{ label: "累積點光天數", value: `${dateSet.size} 天`, icon: "🔥" },
+{ label: "金豆豆", value: goldBeanCount.toString(), icon: "🟢" },
 ];
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
@@ -87,10 +122,25 @@ const stats = [
           <p className="mt-4 text-lg text-slate-300">
   {(todayLightCount ?? 0) > 0 ? "今天已點亮光點 ✨" : "今天還沒點亮光點"}
 </p>
-          <Link href="/light" className="inline-block mt-5 rounded-xl bg-amber-400 px-10 py-3 font-semibold text-slate-950"> 
-          
-         立即點光
-          </Link>
+{canLightNow ? (
+  <Link
+    href="/light"
+    className="inline-block mt-5 rounded-xl bg-amber-400 px-10 py-3 font-semibold text-slate-900"
+  >
+    立即點光
+  </Link>
+) : (
+  <div className="mt-5">
+    <button
+      disabled
+      className="rounded-xl bg-slate-600 px-10 py-3 font-semibold text-slate-300 cursor-not-allowed"
+    >
+      尚未滿一小時
+    </button>
+
+</div>
+)}
+
         </section>
 
         <section className="mt-6 rounded-[28px] border border-white/10 bg-white/10 p-6">
