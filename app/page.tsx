@@ -90,6 +90,27 @@ while (dateSet.has(checkDate)) {
   d.setUTCDate(d.getUTCDate() - 1);
   checkDate = d.toISOString().split("T")[0];
 }
+let maxStreakDays = 0;
+let currentStreak = 0;
+let previousDate: Date | null = null;
+
+const sortedDates = Array.from(dateSet).sort();
+
+for (const date of sortedDates) {
+  const currentDate = new Date(`${date}T00:00:00Z`);
+
+  if (previousDate) {
+    const diffDays =
+      (currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24);
+
+    currentStreak = diffDays === 1 ? currentStreak + 1 : 1;
+  } else {
+    currentStreak = 1;
+  }
+
+  maxStreakDays = Math.max(maxStreakDays, currentStreak);
+  previousDate = currentDate;
+}
 const planetStages = [
   { min: 300, name: "點宇宙至尊" },
   { min: 240, name: "銀河星雲" },
@@ -100,18 +121,46 @@ const planetStages = [
   { min: 0, name: "初始隕石" },
 ];
 
-const currentPlanet =
-  planetStages.find((stage) => lightPointCount >= stage.min)?.name ??
-  "初始隕石";
-const stats = [
+const currentPoints = lightPointCount ?? 0;
+const currentStageIndex = planetStages.findIndex(
+  (stage) => currentPoints >= stage.min
+);
+const currentStage =
+  planetStages[currentStageIndex] ?? planetStages[planetStages.length - 1];
+const nextStage =
+  currentStageIndex > 0 ? planetStages[currentStageIndex - 1] : null;
+const currentPlanet = currentStage.name;
+
+const upgradeProgress = nextStage
+  ? Math.min(
+      ((currentPoints - currentStage.min) /
+        (nextStage.min - currentStage.min)) *
+        100,
+      100
+    )
+  : 100;
+
+const pointsToNextStage = nextStage
+  ? Math.max(nextStage.min - currentPoints, 0)
+  : 0;const stats = [
   { label: "累積光點", value: lightPointCount?.toString() || "0", icon: "✨" },
 { label: "目前星球", value: currentPlanet, icon: "🌍" },
 { label: "累積點光天數", value: `${dateSet.size} 天`, icon: "🔥" },
 { label: "金豆豆", value: goldBeanCount.toString(), icon: "🟢" },
 ];
-  return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center px-6 py-12">
+
+const unlockedBenefits = [
+  { days: 15, name: "日常充電｜星巴克特大杯咖啡券" },
+  { days: 30, name: "絕對人性｜遲到免死金牌" },
+  { days: 60, name: "排班自由｜指定特殊日優先畫假券" },
+  { days: 90, name: "彈性呼吸｜自由換假券一天" },
+].filter((benefit) => (
+  benefit.days === 90
+    ? dateSet.size >= 90
+    : maxStreakDays >= benefit.days
+));
+return (
+  <main className="min-h-screen bg-slate-950 text-slate-100">      <div className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center px-6 py-12">
         <section className="rounded-[32px] border border-white/10 bg-slate-900/80 p-8 shadow-2xl shadow-black/30 backdrop-blur">
           <p className="text-sm text-amber-300">
             每天一點點，宇宙終將被點亮
@@ -157,6 +206,29 @@ const stats = [
           </div>
         </section>
         <section className="mt-6 rounded-[28px] border border-white/10 bg-white/10 p-6">
+  <h2 className="text-xl font-semibold">🎁 我的福利小確幸</h2>
+
+  {unlockedBenefits.length === 0 ? (
+    <p className="mt-4 text-slate-300">
+     持續點光，連續 15 天即可解鎖第一個小確幸。
+    </p>
+  ) : (
+    <div className="mt-4 space-y-3">
+      {unlockedBenefits.map((benefit) => (
+        <div
+          key={benefit.days}
+          className="rounded-2xl bg-slate-900/70 p-4"
+        >
+          <p className="font-semibold text-lime-300">
+          {benefit.days === 90 ? "累積" : "連續"} {benefit.days} 天解鎖
+          </p>
+          <p className="mt-1 text-white">{benefit.name}</p>
+        </div>
+      ))}
+    </div>
+  )}
+</section>
+        <section className="mt-6 rounded-[28px] border border-white/10 bg-white/10 p-6">
   <h2 className="text-xl font-semibold">全宇宙光點統計</h2>
   <p className="mt-5 text-sm text-slate-400">🌌 全宇宙累積光點</p>
   <p className="mt-2 text-3xl font-semibold text-white">
@@ -167,20 +239,17 @@ const stats = [
   <div className="flex items-center justify-between">
     <h2 className="text-xl font-bold text-white">升級進度</h2>
    <span className="text-sm font-semibold text-lime-300">
-  {Math.min(((lightPointCount ?? 0) / 20) * 100, 100)}%
-</span>
+{Math.round(upgradeProgress)}%</span>
   </div>
 
   <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-700">
   <div
   className="h-full rounded-full bg-lime-400"
-  style={{ width: `${Math.min(lightPointCount ?? 0, 100)}%` }}
-></div>
+style={{ width: `${upgradeProgress}%` }}></div>
   </div>
 
   <p className="mt-3 text-slate-300">
-    距離下一顆星還差 {Math.max(20 - (lightPointCount ?? 0), 0)} 光點
-  </p>
+距離下一顆星還差 {pointsToNextStage} 光點  </p>
 </section>
       </div>
     </main>
