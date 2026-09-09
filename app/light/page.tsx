@@ -25,6 +25,7 @@ const router = useRouter();
  <input
   type="file"
   accept="image/*"
+  
   className="hidden"
   onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
 />
@@ -45,7 +46,12 @@ const router = useRouter();
          onClick={async () => {
 if (isSubmitting) return;
 setIsSubmitting(true);
-          const today = new Intl.DateTimeFormat("en-CA", {
+if (text.length > 30) {
+  alert("文字最多 30 字");
+  setIsSubmitting(false);
+  return;
+}
+const today = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Taipei",
 }).format(new Date());
 const { data: todayPoints, error: queryError } = await supabase
@@ -76,12 +82,23 @@ if (diffMinutes < 60) {
   alert("距離上一次點光未滿一小時，本次內容不會保留");
   setText("");
   setPhoto(null);
+ setIsSubmitting(false);
   return;
 }
 } 
 let photoUrl: string | null = null;
 
 if (photo) {
+  if (!photo.type.startsWith("image/")) {
+  alert("只能上傳圖片檔案");
+  setIsSubmitting(false);
+  return;
+}
+if (photo.size > 10 * 1024 * 1024) {
+  alert("照片檔案太大，請選擇 10MB 以下的圖片");
+  setIsSubmitting(false);
+  return;
+}
   const fileExt = photo.name.split(".").pop();
   const fileName = `${Date.now()}.${fileExt}`;
 
@@ -120,7 +137,7 @@ setIsSubmitting(false);
 router.push("/");
 router.refresh();
 }}
-          disabled={text.trim() === "" && !photo}
+          disabled={isSubmitting || (text.trim() === "" && !photo)}
             className="mt-6 rounded-full bg-amber-400 px-6 py-3 font-semibold text-slate-900"
           >
             發布光點

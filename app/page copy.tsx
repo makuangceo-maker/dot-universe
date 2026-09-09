@@ -1,5 +1,4 @@
 import { supabase } from "@/lib/supabase";
-import { supabaseServer } from "@/lib/supabase-server";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -8,8 +7,7 @@ export default async function Home() {
   .from("players")
   .select("*");
  const player = players?.[0];
-const displayName = player?.job_title || player?.name || "玩家";
- const { data: validLightPoints, error: lightPointError } = await supabase
+const { data: validLightPoints, error: lightPointError } = await supabase
   .from("light_points")
 .select("light_text, light_photo, light_date, created_at")
   .eq("employee_id", player?.employee_id ?? "");
@@ -22,41 +20,6 @@ const validItems = (validLightPoints ?? []).filter((item) => {
 
   return hasText || hasPhoto;
 });
-const photoItems = await Promise.all(
-  validItems
-   .filter((item) => !!item.light_photo && !!item.created_at && new Date(item.created_at).getTime() >= Date.now() - 24 * 60 * 60 * 1000)
-    .map(async (item) => {
-      const marker = "/storage/v1/object/public/light-photos/";
-      const photoPath = item.light_photo?.includes(marker)
-        ? item.light_photo.split(marker)[1]
-        : null;
-
-      if (!photoPath) return null;
-
-      const { data, error } = await supabaseServer.storage
-        .from("light-photos")
-        .createSignedUrl(photoPath, 60 * 60);
-
-      if (error || !data?.signedUrl) return null;
-
-      return {
-        ...item,
-        signedPhotoUrl: data.signedUrl,
-      };
-    })
-);
-
-const visiblePhotoItems = photoItems
-  .filter(
-    (item): item is NonNullable<typeof item> => item !== null
-  )
-  .sort(
-    (a, b) =>
-      new Date(b.created_at!).getTime() -
-      new Date(a.created_at!).getTime()
-  )
-  .slice(0, 6);
-
 const latestValidItem = [...validItems]
   .filter((item) => item.created_at)
   .sort(
@@ -78,30 +41,7 @@ const canLightNow = minutesSinceLastLight >= 60;
 const minutesUntilNextLight = canLightNow
   ? 0
   : Math.ceil(60 - minutesSinceLastLight);
-const validLightItems = [...validItems]
-  .filter((item) => item.created_at)
-  .sort(
-    (a, b) =>
-      new Date(a.created_at!).getTime() -
-      new Date(b.created_at!).getTime()
-  );
-
-const effectiveLightItems: typeof validLightItems = [];
-let lastEffectiveAt: number | null = null;
-
-for (const item of validLightItems) {
-  const createdAtMs = new Date(item.created_at!).getTime();
-
-  if (
-    lastEffectiveAt === null ||
-    createdAtMs - lastEffectiveAt >= 60 * 60 * 1000
-  ) {
-    effectiveLightItems.push(item);
-    lastEffectiveAt = createdAtMs;
-  }
-}
-
-const lightPointCount = effectiveLightItems.length;
+const lightPointCount = validItems.length;
 
 const validDateSet = new Set(
   validItems
@@ -109,92 +49,10 @@ const validDateSet = new Set(
     .filter((date): date is string => !!date)
 );
  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date());
-const { data: allLightPoints } = await supabase
+const { count: universeLightCount } = await supabase
   .from("light_points")
-  .select("employee_id, light_text, light_photo, created_at")
-  .order("created_at", { ascending: true });
-const universePhotoItems = await Promise.all(
-  (allLightPoints ?? [])
-    .filter(
-      (item) =>
-        !!item.light_photo &&
-        !!item.created_at &&
-        new Date(item.created_at).getTime() >=
-          Date.now() - 24 * 60 * 60 * 1000
-    )
-    .map(async (item) => {
-      const marker = "/storage/v1/object/public/light-photos/";
-      const photoPath = item.light_photo?.includes(marker)
-        ? item.light_photo.split(marker)[1]
-        : null;
-
-      if (!photoPath) return null;
-
-      const { data, error } = await supabaseServer.storage
-        .from("light-photos")
-        .createSignedUrl(photoPath, 60 * 60);
-
-      if (error || !data?.signedUrl) return null;
-
-      return {
-        ...item,
-        signedPhotoUrl: data.signedUrl,
-      };
-    })
-);
-
-const visibleUniversePhotoItems = universePhotoItems
-  .filter(
-    (item): item is NonNullable<typeof item> => item !== null
-  )
-  .sort(
-    (a, b) =>
-      new Date(b.created_at!).getTime() -
-      new Date(a.created_at!).getTime()
-  )
-  .slice(0, 6);
-const lightCountByEmployee = new Map<string, number>();
-const lastValidAtByEmployee = new Map<string, number>();
-
-for (const item of allLightPoints ?? []) {
-  const employeeId = item.employee_id;
-  if (!employeeId || !item.created_at) continue;
-
-  const hasText =
-    (item.light_text ?? "").trim() !== "" &&
-    item.light_text !== "EMPTY";
-  const hasPhoto = !!item.light_photo;
-
-  if (!hasText && !hasPhoto) continue;
-
-  const createdAtMs = new Date(item.created_at).getTime();
-  const lastValidAt = lastValidAtByEmployee.get(employeeId);
-
-  if (
-    lastValidAt !== undefined &&
-    createdAtMs - lastValidAt < 60 * 60 * 1000
-  ) {
-    continue;
-  }
-
-  lightCountByEmployee.set(
-    employeeId,
-    (lightCountByEmployee.get(employeeId) ?? 0) + 1
-  );
-
-  lastValidAtByEmployee.set(employeeId, createdAtMs);
-}
-
-const rankedPlayers = (players ?? [])
-  .map((person) => ({
-    ...person,
-   lightCount: lightCountByEmployee.get(person.employee_id) ?? 0,
-  }))
-  .sort((a, b) => b.lightCount - a.lightCount)
-  .slice(0, 10);
- const universeLightCount = Array.from(lightCountByEmployee.values()).reduce((sum, count) => sum + count, 0);
-
-  const { count: todayLightCount } = await supabase
+  .select("*", { count: "exact", head: true });
+const { count: todayLightCount } = await supabase
  .from("light_points")
  
   .select("*", { count: "exact", head: true })
@@ -272,10 +130,7 @@ const currentStage =
 const nextStage =
   currentStageIndex > 0 ? planetStages[currentStageIndex - 1] : null;
 const currentPlanet = currentStage.name;
-const highestUnlockedPlanet =
-  planetStages.find(
-    (stage) => (rankedPlayers[0]?.lightCount ?? 0) >= stage.min
-  )?.name || "初始隕石";
+
 const upgradeProgress = nextStage
   ? Math.min(
       ((currentPoints - currentStage.min) /
@@ -337,7 +192,7 @@ return (
             每天一點點，宇宙終將被點亮
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-歡迎回來，{displayName}
+           歡迎回來，{player?.name || "玩家"}
           </h1>
           <p className="mt-4 text-lg text-slate-300">
   {(todayLightCount ?? 0) > 0 ? "今天已點亮光點 ✨" : "今天還沒點亮光點"}
@@ -376,41 +231,6 @@ return (
             ))}
           </div>
         </section>
-       <section className="mt-6 rounded-[28px] border border-white/10 bg-white/10 p-6">
-  <h2 className="text-xl font-semibold">
-  <Link href="/light-feed" className="hover:text-lime-300">
-    📷 24小時光點動態
-  </Link>
-</h2>
-
- {visibleUniversePhotoItems.length === 0 ? (
-    <p className="mt-4 text-slate-300">
-      目前還沒有可觀看的光點照片。
-    </p>
-  ) : (
-    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-    {visibleUniversePhotoItems.map((item, index) => (
-        <div
-          key={`${item.created_at ?? "photo"}-${index}`}
-          className="rounded-2xl bg-slate-900/70 p-4"
-        >
-          <img
-            src={item.signedPhotoUrl}
-            alt="我的光點照片"
-            className="w-full rounded-xl object-cover"
-          />
-          {item.light_text &&
-            item.light_text.trim() !== "" &&
-            item.light_text !== "EMPTY" && (
-              <p className="mt-3 text-slate-200">
-                {item.light_text}
-              </p>
-            )}
-        </div>
-      ))}
-    </div>
-  )}
-</section> 
         <section className="mt-6 rounded-[28px] border border-white/10 bg-white/10 p-6">
   <h2 className="text-xl font-semibold">🎁 我的福利小確幸</h2>
 
@@ -461,28 +281,7 @@ return (
     {universeLightCount ?? 0}
   </p>
 </section>
-<section className="mt-6 rounded-[28px] border border-white/10 bg-white/10 p-6">
-  <h2 className="text-xl font-semibold">🚩 高光時刻插旗榜</h2>
-  <p className="mt-2 text-sm text-slate-400">
-  全宇宙光點 Top 10
-</p>
-
-  <div className="mt-4 space-y-2">
-    {rankedPlayers.map((person, index) => (
-      <div
-        key={person.employee_id}
-        className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3"
-      >
-       <span>
-  🚩 {index + 1}. {person.name || "玩家"}｜{person.job_title || "夥伴"}｜{planetStages.find((stage) => person.lightCount >= stage.min)?.name || "初始隕石"}
-</span>
-        <span className="text-slate-300">{person.lightCount} 光點</span>
-      </div>
-    ))}
-  </div>
-</section>
-
-<section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
+       <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
   <div className="flex items-center justify-between">
     <h2 className="text-xl font-bold text-white">升級進度</h2>
    <span className="text-sm font-semibold text-lime-300">
