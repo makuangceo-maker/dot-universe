@@ -133,7 +133,6 @@ light_photo: photoUrl,
     return;
   }
 setIsSubmitting(false);
-  alert("發布成功");
 router.push("/");
 router.refresh();
 }}
