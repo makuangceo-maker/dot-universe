@@ -113,47 +113,59 @@ const { data: allLightPoints } = await supabase
   .from("light_points")
   .select("employee_id, light_text, light_photo, created_at")
   .order("created_at", { ascending: true });
-const universePhotoItems = await Promise.all(
+const universeFeedItems = await Promise.all(
   (allLightPoints ?? [])
-    .filter(
-      (item) =>
-        !!item.light_photo &&
-        !!item.created_at &&
+    .filter((item) => {
+      if (!item.created_at) return false;
+
+      const isWithin24Hours =
         new Date(item.created_at).getTime() >=
-          Date.now() - 24 * 60 * 60 * 1000
-    )
+        Date.now() - 24 * 60 * 60 * 1000;
+
+      const hasText =
+        (item.light_text ?? "").trim() !== "" &&
+        item.light_text !== "EMPTY";
+
+      const hasPhoto = !!item.light_photo;
+
+      return isWithin24Hours && (hasText || hasPhoto);
+    })
     .map(async (item) => {
-      const marker = "/storage/v1/object/public/light-photos/";
-      const photoPath = item.light_photo?.includes(marker)
-        ? item.light_photo.split(marker)[1]
-        : null;
+      let signedPhotoUrl: string | null = null;
 
-      if (!photoPath) return null;
+      if (item.light_photo) {
+        const marker = "/storage/v1/object/public/light-photos/";
 
-      const { data, error } = await supabaseServer.storage
-        .from("light-photos")
-        .createSignedUrl(photoPath, 60 * 60);
+        const photoPath = item.light_photo.includes(marker)
+          ? item.light_photo.split(marker)[1]
+          : null;
 
-      if (error || !data?.signedUrl) return null;
+        if (photoPath) {
+          const { data, error } = await supabaseServer.storage
+            .from("light-photos")
+            .createSignedUrl(photoPath, 60 * 60);
+
+          if (!error && data?.signedUrl) {
+            signedPhotoUrl = data.signedUrl;
+          }
+        }
+      }
 
       return {
         ...item,
-        signedPhotoUrl: data.signedUrl,
+        signedPhotoUrl,
       };
     })
 );
 
-const visibleUniversePhotoItems = universePhotoItems
-  .filter(
-    (item): item is NonNullable<typeof item> => item !== null
-  )
+const visibleUniverseFeedItems = universeFeedItems
   .sort(
     (a, b) =>
       new Date(b.created_at!).getTime() -
       new Date(a.created_at!).getTime()
   )
   .slice(0, 6);
-const lightCountByEmployee = new Map<string, number>();
+  const lightCountByEmployee = new Map<string, number>();
 const lastValidAtByEmployee = new Map<string, number>();
 
 for (const item of allLightPoints ?? []) {
@@ -345,7 +357,7 @@ return (
 {canLightNow ? (
   <Link
     href="/light"
-    className="inline-block mt-5 rounded-xl bg-amber-400 px-10 py-3 font-semibold text-slate-900"
+   className="inline-block mt-5 cursor-pointer rounded-xl bg-amber-400 px-10 py-3 font-semibold text-slate-900 transition hover:bg-amber-300 active:scale-[0.98]"
   >
     立即點光
   </Link>
@@ -377,29 +389,29 @@ return (
           </div>
         </section>
        <section className="mt-6 rounded-[28px] border border-white/10 bg-white/10 p-6">
-  <h2 className="text-xl font-semibold">
-  <Link href="/light-feed" className="hover:text-lime-300">
+  <h2 className="text-xl font-semibold">  <Link href="/light-feed" className="cursor-pointer transition hover:text-lime-300 active:opacity-70">
     📷 24小時光點動態
   </Link>
 </h2>
 
- {visibleUniversePhotoItems.length === 0 ? (
-    <p className="mt-4 text-slate-300">
-      目前還沒有可觀看的光點照片。
-    </p>
-  ) : (
-    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-    {visibleUniversePhotoItems.map((item, index) => (
-        <div
+{visibleUniverseFeedItems.length === 0 ? (
+  <p className="mt-4 text-slate-300">
+    最近 24 小時還沒有新的光點。
+  </p>
+) : (
+  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+    {visibleUniverseFeedItems.map((item, index) => (
+              <div
           key={`${item.created_at ?? "photo"}-${index}`}
           className="rounded-2xl bg-slate-900/70 p-4"
         >
-          <img
-            src={item.signedPhotoUrl}
-            alt="我的光點照片"
-            className="w-full rounded-xl object-cover"
-          />
-          {item.light_text &&
+{item.signedPhotoUrl && (
+  <img
+    src={item.signedPhotoUrl}
+    alt="24小時光點動態"
+    className="w-full rounded-xl object-cover"
+  />
+)}          {item.light_text &&
             item.light_text.trim() !== "" &&
             item.light_text !== "EMPTY" && (
               <p className="mt-3 text-slate-200">
