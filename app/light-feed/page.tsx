@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { supabaseServer } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
-
+export const revalidate = 0;
 export default async function LightFeedPage() {
   const since24HoursAgo = new Date(
     Date.now() - 24 * 60 * 60 * 1000
