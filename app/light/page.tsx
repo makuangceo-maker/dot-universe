@@ -19,7 +19,19 @@ const router = useRouter();
           <p className="mt-3 text-slate-300">
             分享今天的光點
           </p>
-
+<button
+  type="button"
+  onClick={() => {
+    if (text.trim() !== "" || photo) {
+      const leave = window.confirm("內容尚未發布，確定要回首頁嗎？");
+      if (!leave) return;
+    }
+    router.push("/");
+  }}
+  className="mt-4 text-sm text-slate-300 underline"
+>
+  ← 回首頁
+</button>
           <label className="mt-6 block cursor-pointer rounded-2xl border-2 border-dashed border-slate-600 p-10 text-center">
   📷 新增照片
  <input
@@ -139,7 +151,7 @@ router.refresh();
           disabled={isSubmitting || (text.trim() === "" && !photo)}
             className="mt-6 rounded-full bg-amber-400 px-6 py-3 font-semibold text-slate-900"
           >
-            發布光點
+{isSubmitting ? "發布中…" : "發布光點"}
           </button>
 
         </section>
