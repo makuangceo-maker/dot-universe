@@ -64,7 +64,24 @@ const latestValidItem = [...validItems]
       new Date(b.created_at!).getTime() -
       new Date(a.created_at!).getTime()
   )[0];
+let latestSignedPhotoUrl: string | null = null;
 
+if (latestValidItem?.light_photo) {
+  const marker = "/storage/v1/object/public/light-photos/";
+  const photoPath = latestValidItem.light_photo.includes(marker)
+    ? latestValidItem.light_photo.split(marker)[1]
+    : null;
+
+  if (photoPath) {
+    const { data, error } = await supabaseServer.storage
+      .from("light-photos")
+      .createSignedUrl(photoPath, 60 * 60);
+
+    if (!error && data?.signedUrl) {
+      latestSignedPhotoUrl = data.signedUrl;
+    }
+  }
+}
 const lastLightAt = latestValidItem?.created_at
   ? new Date(latestValidItem.created_at)
   : null;
@@ -372,8 +389,30 @@ return (
 
 </div>
 )}
+</section>
+       {latestValidItem && (
+  <section className="mt-6 rounded-[28px] border border-white/10 bg-white/10 p-6">
+    <h2 className="text-xl font-semibold">✨ 我的最近光點</h2>
 
-        </section>
+    <div className="mt-4 rounded-2xl bg-slate-900/70 p-4">
+      {latestSignedPhotoUrl && (
+        <img
+          src={latestSignedPhotoUrl}
+          alt="我的最近光點"
+          className="w-full rounded-xl object-cover"
+        />
+      )}
+
+      {latestValidItem.light_text &&
+        latestValidItem.light_text.trim() !== "" &&
+        latestValidItem.light_text !== "EMPTY" && (
+          <p className="mt-3 text-slate-200">
+            {latestValidItem.light_text}
+          </p>
+        )}
+    </div>
+  </section>
+)} 
 
         <section className="mt-6 rounded-[28px] border border-white/10 bg-white/10 p-6">
           <h2 className="text-xl font-semibold">我的銀河流量</h2>
