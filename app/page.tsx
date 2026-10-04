@@ -413,7 +413,20 @@ return (
     </div>
   </section>
 )} 
-
+<Link
+  href="/light-feed"
+  className="mt-6 block rounded-[28px] border border-white/10 bg-white/10 p-6 transition hover:bg-white/15"
+>
+  <div className="flex items-center justify-between">
+    <div>
+      <h2 className="text-xl font-semibold">🌌 全宇宙 24 小時光點</h2>
+      <p className="mt-2 text-sm text-slate-300">
+        看看夥伴們最近 24 小時分享的照片與文字
+      </p>
+    </div>
+    <span className="text-2xl">→</span>
+  </div>
+</Link>
         <section className="mt-6 rounded-[28px] border border-white/10 bg-white/10 p-6">
           <h2 className="text-xl font-semibold">我的銀河流量</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
