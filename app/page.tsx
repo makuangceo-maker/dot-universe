@@ -388,41 +388,6 @@ return (
             ))}
           </div>
         </section>
-       <section className="mt-6 rounded-[28px] border border-white/10 bg-white/10 p-6">
-  <h2 className="text-xl font-semibold">  <Link href="/light-feed" className="cursor-pointer transition hover:text-lime-300 active:opacity-70">
-    📷 24小時光點動態
-  </Link>
-</h2>
-
-{visibleUniverseFeedItems.length === 0 ? (
-  <p className="mt-4 text-slate-300">
-    最近 24 小時還沒有新的光點。
-  </p>
-) : (
-  <div className="mt-4 grid gap-4 sm:grid-cols-2">
-    {visibleUniverseFeedItems.map((item, index) => (
-              <div
-          key={`${item.created_at ?? "photo"}-${index}`}
-          className="rounded-2xl bg-slate-900/70 p-4"
-        >
-{item.signedPhotoUrl && (
-  <img
-    src={item.signedPhotoUrl}
-    alt="24小時光點動態"
-    className="w-full rounded-xl object-cover"
-  />
-)}          {item.light_text &&
-            item.light_text.trim() !== "" &&
-            item.light_text !== "EMPTY" && (
-              <p className="mt-3 text-slate-200">
-                {item.light_text}
-              </p>
-            )}
-        </div>
-      ))}
-    </div>
-  )}
-</section> 
         <section className="mt-6 rounded-[28px] border border-white/10 bg-white/10 p-6">
   <h2 className="text-xl font-semibold">🎁 我的福利小確幸</h2>
 
