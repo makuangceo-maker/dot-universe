@@ -1,4 +1,4 @@
-import Link from "next/link";
+import BackHomeLink from "./BackHomeLink";
 import { supabase } from "@/lib/supabase";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -71,13 +71,7 @@ export default async function LightFeedPage() {
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto max-w-4xl px-6 py-12">
         <div className="mb-6">
-          <Link
-            href="/"
-            className="text-sm text-slate-300"
-          >
-            ← 回首頁
-          </Link>
-
+<BackHomeLink />
           <h1 className="mt-4 text-3xl font-bold">
             📷 24小時光點動態
           </h1>
