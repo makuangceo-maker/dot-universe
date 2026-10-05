@@ -22,40 +22,6 @@ const validItems = (validLightPoints ?? []).filter((item) => {
 
   return hasText || hasPhoto;
 });
-const photoItems = await Promise.all(
-  validItems
-   .filter((item) => !!item.light_photo && !!item.created_at && new Date(item.created_at).getTime() >= Date.now() - 24 * 60 * 60 * 1000)
-    .map(async (item) => {
-      const marker = "/storage/v1/object/public/light-photos/";
-      const photoPath = item.light_photo?.includes(marker)
-        ? item.light_photo.split(marker)[1]
-        : null;
-
-      if (!photoPath) return null;
-
-      const { data, error } = await supabaseServer.storage
-        .from("light-photos")
-        .createSignedUrl(photoPath, 60 * 60);
-
-      if (error || !data?.signedUrl) return null;
-
-      return {
-        ...item,
-        signedPhotoUrl: data.signedUrl,
-      };
-    })
-);
-
-const visiblePhotoItems = photoItems
-  .filter(
-    (item): item is NonNullable<typeof item> => item !== null
-  )
-  .sort(
-    (a, b) =>
-      new Date(b.created_at!).getTime() -
-      new Date(a.created_at!).getTime()
-  )
-  .slice(0, 6);
 
 const latestValidItem = [...validItems]
   .filter((item) => item.created_at)
@@ -130,58 +96,6 @@ const { data: allLightPoints } = await supabase
   .from("light_points")
   .select("employee_id, light_text, light_photo, created_at")
   .order("created_at", { ascending: true });
-const universeFeedItems = await Promise.all(
-  (allLightPoints ?? [])
-    .filter((item) => {
-      if (!item.created_at) return false;
-
-      const isWithin24Hours =
-        new Date(item.created_at).getTime() >=
-        Date.now() - 24 * 60 * 60 * 1000;
-
-      const hasText =
-        (item.light_text ?? "").trim() !== "" &&
-        item.light_text !== "EMPTY";
-
-      const hasPhoto = !!item.light_photo;
-
-      return isWithin24Hours && (hasText || hasPhoto);
-    })
-    .map(async (item) => {
-      let signedPhotoUrl: string | null = null;
-
-      if (item.light_photo) {
-        const marker = "/storage/v1/object/public/light-photos/";
-
-        const photoPath = item.light_photo.includes(marker)
-          ? item.light_photo.split(marker)[1]
-          : null;
-
-        if (photoPath) {
-          const { data, error } = await supabaseServer.storage
-            .from("light-photos")
-            .createSignedUrl(photoPath, 60 * 60);
-
-          if (!error && data?.signedUrl) {
-            signedPhotoUrl = data.signedUrl;
-          }
-        }
-      }
-
-      return {
-        ...item,
-        signedPhotoUrl,
-      };
-    })
-);
-
-const visibleUniverseFeedItems = universeFeedItems
-  .sort(
-    (a, b) =>
-      new Date(b.created_at!).getTime() -
-      new Date(a.created_at!).getTime()
-  )
-  .slice(0, 6);
   const lightCountByEmployee = new Map<string, number>();
 const lastValidAtByEmployee = new Map<string, number>();
 
