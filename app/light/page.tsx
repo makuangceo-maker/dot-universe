@@ -31,7 +31,7 @@ const router = useRouter();
   }}
   className="mt-4 text-sm text-slate-300 underline"
 >
-  ← 回首頁
+{isReturning ? "返回中…" : "← 回首頁"}
 </button>
           <label className="mt-6 block cursor-pointer rounded-2xl border-2 border-dashed border-slate-600 p-10 text-center">
   📷 新增照片
