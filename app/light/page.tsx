@@ -27,6 +27,7 @@ const router = useRouter();
       const leave = window.confirm("內容尚未發布，確定要回首頁嗎？");
       if (!leave) return;
     }
+   setIsReturning(true); 
     router.push("/");
   }}
   className="mt-4 text-sm text-slate-300 underline"
