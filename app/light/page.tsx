@@ -6,6 +6,7 @@ export default function LightPage() {
 const [text, setText] = useState("");
 const [photo, setPhoto] = useState<File | null>(null); 
 const [isSubmitting, setIsSubmitting] = useState(false);
+const [isReturning, setIsReturning] = useState(false);
 const router = useRouter();
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
@@ -58,6 +59,7 @@ const router = useRouter();
          onClick={async () => {
 if (isSubmitting) return;
 setIsSubmitting(true);
+console.time("D0-6 publish total");
 if (text.length > 30) {
   alert("文字最多 30 字");
   setIsSubmitting(false);
@@ -66,13 +68,14 @@ if (text.length > 30) {
 const today = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Taipei",
 }).format(new Date());
+console.time("D0-6 query todayPoints");
 const { data: todayPoints, error: queryError } = await supabase
   .from("light_points")
   .select("created_at")
   .eq("employee_id", "A001")
   .eq("light_date", today)
   .order("created_at", { ascending: false });
-
+console.timeEnd("D0-6 query todayPoints");
   if (queryError) {
   alert(queryError.message);
  setIsSubmitting(false);
@@ -144,7 +147,7 @@ light_photo: photoUrl,
  setIsSubmitting(false);  
     return;
   }
-setIsSubmitting(false);
+  setIsReturning(true);
 router.push("/");
 router.refresh();
 }}
